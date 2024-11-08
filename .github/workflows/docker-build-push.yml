@@ -1,0 +1,40 @@
+name: Build and Push Docker Image to Google Artifact Registry
+
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    
+    - id: "auth"
+      uses: "google-github-actions/auth@v2"
+      with:
+        credentials_json: "${{ secrets.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY }}"
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GOOGLE_CLOUD_PROJECT_ID }}
+        service_account_key: ${{ secrets.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY }}
+
+    - name: Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker us-central1-docker.pkg.dev
+
+    - name: Build Docker Image
+      run: |
+        docker build -t google_cloud_backup .
+    
+    - name: Tag Docker Image
+      run: |
+        docker tag google_cloud_backup:latest us-central1-docker.pkg.dev/${{ secrets.GOOGLE_CLOUD_PROJECT_ID }}/terraform-test-repo/google_cloud_backup:latest
+    
+    - name: Push Docker Image to Artifact Registry
+      run: |
+        docker push us-central1-docker.pkg.dev/${{ secrets.GOOGLE_CLOUD_PROJECT_ID }}/terraform-test-repo/google_cloud_backup:latest
